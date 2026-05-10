@@ -1,0 +1,315 @@
+================================================================================
+APACHE SOLR - LAB 13 COMMANDS GUIDE
+================================================================================
+Dataset: Books/Library Collection (20 books)
+================================================================================
+
+================================================================================
+STEP 1: START SOLR SERVER
+================================================================================
+
+# Navigate to Solr directory and start Solr
+cd C:\solr-9.x.x   (or your solr installation path)
+
+# Start Solr in standalone mode
+bin\solr start
+
+# OR Start Solr in cloud mode (for distributed setup)
+bin\solr start -c
+
+# Verify Solr is running - Open browser:
+http://localhost:8983/solr/
+
+================================================================================
+STEP 2: CREATE A NEW CORE/COLLECTION
+================================================================================
+
+# Create a new core named "books"
+bin\solr create -c books
+
+# For cloud mode, create collection with shards:
+bin\solr create -c books -s 2 -rf 2
+
+# Verify core creation:
+http://localhost:8983/solr/#/books
+
+================================================================================
+STEP 3: CONFIGURE SCHEMA (Define Field Types)
+================================================================================
+
+# Option 1: Using Schema API (POST requests)
+# Add fields to the schema using curl or Postman
+
+# Add 'title' field (text, searchable)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "title",
+    "type": "text_general",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'author' field
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "author",
+    "type": "text_general",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'category' field (for faceting)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "category",
+    "type": "string",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'price' field (numeric)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "price",
+    "type": "pfloat",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'year' field (integer)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "year",
+    "type": "pint",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'description' field (text)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "description",
+    "type": "text_general",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'publisher' field
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "publisher",
+    "type": "string",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'in_stock' field (boolean)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "in_stock",
+    "type": "boolean",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+# Add 'pages' field (integer)
+curl -X POST -H 'Content-type:application/json' --data-binary '{
+  "add-field": {
+    "name": "pages",
+    "type": "pint",
+    "stored": true,
+    "indexed": true
+  }
+}' http://localhost:8983/solr/books/schema
+
+================================================================================
+STEP 4: INDEX THE DATA (Import JSON Dataset)
+================================================================================
+
+# Using POST tool (from Solr bin directory)
+bin\post -c books path\to\books.json
+
+# OR Using curl:
+curl -X POST -H "Content-Type: application/json" \
+  --data-binary @books.json \
+  "http://localhost:8983/solr/books/update?commit=true"
+
+# For Windows PowerShell:
+Invoke-RestMethod -Uri "http://localhost:8983/solr/books/update?commit=true" `
+  -Method Post -ContentType "application/json" `
+  -InFile "books.json"
+
+# Verify data indexed:
+http://localhost:8983/solr/books/select?q=*:*
+
+================================================================================
+STEP 5: BASIC SEARCH QUERIES
+================================================================================
+
+# Search all documents
+http://localhost:8983/solr/books/select?q=*:*
+
+# Search by title
+http://localhost:8983/solr/books/select?q=title:algorithms
+
+# Search by author
+http://localhost:8983/solr/books/select?q=author:Martin
+
+# Search in description
+http://localhost:8983/solr/books/select?q=description:programming
+
+# Multi-field search
+http://localhost:8983/solr/books/select?q=title:python OR author:Eric
+
+# Phrase search (exact phrase)
+http://localhost:8983/solr/books/select?q=title:"Clean Code"
+
+# Wildcard search
+http://localhost:8983/solr/books/select?q=title:Algo*
+
+# Fuzzy search (handles typos)
+http://localhost:8983/solr/books/select?q=title:algoritms~1
+
+================================================================================
+STEP 6: FILTERING QUERIES
+================================================================================
+
+# Filter by category
+http://localhost:8983/solr/books/select?q=*:*&fq=category:"Computer Science"
+
+# Filter by price range
+http://localhost:8983/solr/books/select?q=*:*&fq=price:[0 TO 50]
+
+# Filter by year
+http://localhost:8983/solr/books/select?q=*:*&fq=year:[2015 TO 2023]
+
+# Filter by availability
+http://localhost:8983/solr/books/select?q=*:*&fq=in_stock:true
+
+# Multiple filters
+http://localhost:8983/solr/books/select?q=*:*&fq=category:"Programming"&fq=price:[0 TO 50]
+
+================================================================================
+STEP 7: SORTING RESULTS
+================================================================================
+
+# Sort by price ascending
+http://localhost:8983/solr/books/select?q=*:*&sort=price asc
+
+# Sort by price descending
+http://localhost:8983/solr/books/select?q=*:*&sort=price desc
+
+# Sort by year descending
+http://localhost:8983/solr/books/select?q=*:*&sort=year desc
+
+# Sort by multiple fields
+http://localhost:8983/solr/books/select?q=*:*&sort=category asc,price desc
+
+================================================================================
+STEP 8: FACETED SEARCH
+================================================================================
+
+# Facet by category
+http://localhost:8983/solr/books/select?q=*:*&facet=true&facet.field=category
+
+# Facet by publisher
+http://localhost:8983/solr/books/select?q=*:*&facet=true&facet.field=publisher
+
+# Multiple facets
+http://localhost:8983/solr/books/select?q=*:*&facet=true&facet.field=category&facet.field=publisher
+
+# Range facet on price
+http://localhost:8983/solr/books/select?q=*:*&facet=true&facet.range=price&facet.range.start=0&facet.range.end=200&facet.range.gap=50
+
+# Range facet on year
+http://localhost:8983/solr/books/select?q=*:*&facet=true&facet.range=year&facet.range.start=1990&facet.range.end=2025&facet.range.gap=5
+
+================================================================================
+STEP 9: HIGHLIGHTING SEARCH TERMS
+================================================================================
+
+# Enable highlighting
+http://localhost:8983/solr/books/select?q=description:programming&hl=true&hl.fl=description
+
+# Highlight in multiple fields
+http://localhost:8983/solr/books/select?q=programming&hl=true&hl.fl=title,description
+
+# Custom highlight tags
+http://localhost:8983/solr/books/select?q=programming&hl=true&hl.fl=description&hl.simple.pre=<mark>&hl.simple.post=</mark>
+
+================================================================================
+STEP 10: PAGINATION
+================================================================================
+
+# First 5 results
+http://localhost:8983/solr/books/select?q=*:*&start=0&rows=5
+
+# Next 5 results
+http://localhost:8983/solr/books/select?q=*:*&start=5&rows=5
+
+# Page 3 (10 per page)
+http://localhost:8983/solr/books/select?q=*:*&start=20&rows=10
+
+================================================================================
+STEP 11: FIELD SELECTION
+================================================================================
+
+# Return only specific fields
+http://localhost:8983/solr/books/select?q=*:*&fl=title,author,price
+
+# Return all fields with score
+http://localhost:8983/solr/books/select?q=algorithms&fl=*,score
+
+================================================================================
+STEP 12: COMBINED ADVANCED QUERY
+================================================================================
+
+# Complete example with all features:
+http://localhost:8983/solr/books/select?
+  q=programming&
+  fq=category:"Computer Science"&
+  fq=price:[0 TO 100]&
+  sort=year desc&
+  start=0&rows=10&
+  fl=title,author,price,year,category&
+  facet=true&
+  facet.field=category&
+  hl=true&
+  hl.fl=title,description
+
+================================================================================
+STEP 13: DELETE OPERATIONS
+================================================================================
+
+# Delete by ID
+curl -X POST -H "Content-Type: application/json" \
+  --data-binary '{"delete": {"id": "1"}}' \
+  "http://localhost:8983/solr/books/update?commit=true"
+
+# Delete by query
+curl -X POST -H "Content-Type: application/json" \
+  --data-binary '{"delete": {"query": "category:Career"}}' \
+  "http://localhost:8983/solr/books/update?commit=true"
+
+# Delete all documents
+curl -X POST -H "Content-Type: application/json" \
+  --data-binary '{"delete": {"query": "*:*"}}' \
+  "http://localhost:8983/solr/books/update?commit=true"
+
+================================================================================
+STEP 14: STOP SOLR
+================================================================================
+
+bin\solr stop -all
+
+================================================================================
+END OF COMMANDS GUIDE
+================================================================================
